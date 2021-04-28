@@ -1,0 +1,1 @@
+void *fbmalloc(size_t size);
