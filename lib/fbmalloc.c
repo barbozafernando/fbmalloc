@@ -1,11 +1,9 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/types.h>
+#include <malloc.h>
+#include <windows.h>
 
 void *fbmalloc(size_t size) {
-	void *p = sbrk(size);
+	void *p = (int*) _alloca(size);
 
 	if (p == (void*) -1) {
 		return NULL;
