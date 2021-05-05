@@ -1,12 +1,12 @@
 #include <windows.h>
 #include <stdio.h>
 #include <malloc.h>
-#include "lib/fbmalloc.h"
+#include "lib/fbmalloc.c"
 
 int main() {
     void *ptr;
 
-    ptr = fbmalloc(10);
+    ptr = fbmalloc(5);
 
     printf("Address: %p", ptr);
 
