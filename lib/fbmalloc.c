@@ -22,6 +22,6 @@ void *fbmalloc(size_t size) {
 	}
 }
 
-void *fbfree(*ptr) {
-	
+void *fbfree(void *ptr) {
+
 }
