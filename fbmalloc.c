@@ -59,6 +59,10 @@ struct block_meta *request_space(struct block_meta *last, uint16_t size) {
   return block;
 }
 
+struct block_meta *get_block_ptr(void *ptr) {
+  return (struct block_meta *) ptr - 1;
+}
+
 void *fbmalloc(uint16_t bytes)
 {
     uint16_t total_size;
