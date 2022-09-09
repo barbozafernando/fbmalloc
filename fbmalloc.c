@@ -1,58 +1,96 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <pthread.h>
+#include <stdint.h>
+#include <unistd.h>
 
-union header {
-    struct header_t {
-        size_t size;
-        unsigned short int is_free;
-        struct header_t *next;
-    } s;
-    ALIGN stub;
+#define META_SIZE sizeof(struct block_meta)
+
+// head of the linked list
+void *global_base = NULL;
+
+struct block_meta {
+  // for debbuging only
+  int magic;
+
+  // whether current block is free or not
+  uint8_t is_free;
+
+  // amount of bytes to be allocated
+  uint16_t size;
+
+  // pointer to the next block of memory
+  struct block_meta *next;
 };
-typedef union header header_t;
 
-header_t *head, *tail;
-pthread_mutex_t global_malloc_lock;
+struct block_meta *find_free_block(struct block_meta **last, uint16_t size) {
+  struct block_meta *current = global_base;
 
-void *fbmalloc(size_t size)
+  // checking if there's a free block available
+  while (current && !(current->is_free && current->size >= size)) {
+    *last = current;
+    current = current->next;
+  }
+
+  return current;
+}
+
+struct block_meta *request_space(struct block_meta *last, uint16_t size) {
+  struct block_meta *block;
+
+  // returns a pointer to the current top of the heap
+  block = sbrk(0);
+
+  // allocate given bytes + our metadata
+  void *request = sbrk(size + META_SIZE);
+
+  if (request == (void*) -1)
+    return NULL;
+  
+
+  if (last)
+    // add the new block to the end of the linked list
+    last->next = block;
+
+  block->size = size;
+  block->next = NULL;
+  block->is_free = 0;
+  block->magic = 0x12345678;
+
+  return block;
+}
+
+void *fbmalloc(uint16_t bytes)
 {
-    size_t total_size;
-    void *block;
-    header_t *header;
+    uint16_t total_size;
+    struct block_meta *block;
 
-    if (!size) {
+    if (!bytes) {
         return NULL;
     }
 
-    pthread_mutex_lock(&global_malloc_lock);
-    header = get_free_block(size);
+    // Check the head of linked list
+    if (!global_base) {
+      block = request_space(NULL, bytes);
 
-    if (header) {
-        header->s.is_free = 0;
-        pthread_mutex_unlock(&global_malloc_lock);
-        return (void*)(header + 1);
-    }
-
-    total_size = sizeof(header_t) + size;
-    block = sbrk(total_size);
-    
-    if (block == (void*) -1) {
-        pthread_mutex_unlock(&global_malloc_lock);
+      if (!block) {
         return NULL;
+      }
+
+      global_base = block;
+    } else {
+      struct block_meta *lastNode = global_base;
+      block = find_free_block(&lastNode, bytes);
+
+      if (!block) {
+        block = request_space(lastNode, bytes);
+
+        if (!block)
+            return NULL;
+      }
+
+      block->is_free = 0;
+      block->magic = 0x77777777;
     }
 
-    header = block;
-    header->s.size = size;
-    header->s.is_free = 0;
-    header->s.next = NULL;
-
-    if (!head) 
-        head = header;
-    if (tail)
-        tail->s.next = header;
-
-    tail = header;
-    pthread_mutex_unlock(&global_malloc_lock);
-    return (void*)(header + 1)
+    return (block+1);
 }
