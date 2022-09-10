@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <unistd.h>
+#include <string.h>
 
 #define META_SIZE sizeof(struct block_meta)
 
@@ -63,6 +64,21 @@ struct block_meta *get_block_ptr(void *ptr) {
   return (struct block_meta *) ptr - 1;
 }
 
+void fbfree(void *ptr) {
+  if (!ptr) {
+    return;
+  }
+
+  struct block_meta *block_ptr = get_block_ptr(ptr);
+
+  if (!block_ptr) {
+    return;
+  }
+
+  block_ptr->is_free = 1;
+  block_ptr->magic = 0x55555555;
+}
+
 void *fbmalloc(uint16_t bytes)
 {
     uint16_t total_size;
@@ -98,3 +114,38 @@ void *fbmalloc(uint16_t bytes)
 
     return (block+1);
 }
+
+void *fbrealloc(void *ptr, uint16_t bytes) {
+  struct block_meta *block;
+
+  if (!ptr) {
+    return fbmalloc(bytes);
+  }
+
+  struct block_meta *block_ptr = get_block_ptr(ptr);
+
+  if (bytes <= block_ptr->size)
+    return ptr;
+
+  block = fbmalloc(bytes);
+
+  memcpy(block, ptr, block_ptr->size);
+
+  fbfree(ptr);
+
+  return block;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
