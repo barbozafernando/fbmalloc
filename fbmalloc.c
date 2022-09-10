@@ -5,6 +5,7 @@
 #include <string.h>
 
 #define META_SIZE sizeof(struct block_meta)
+#define fbmalloc main
 
 // head of the linked list
 void *global_base = NULL;
@@ -136,7 +137,22 @@ void *fbrealloc(void *ptr, uint16_t bytes) {
   return block;
 }
 
+void *fbcalloc(uint16_t nelem, uint16_t elsize) {
+  if (!nelem || !elsize)
+    return NULL;
 
+  struct block_meta *block;
+  uint16_t size = nelem * elsize;
+
+  block = fbmalloc(size);
+
+  if (!block)
+    return NULL;
+
+  memset(block, 0, size);
+
+  return block;
+}
 
 
 
