@@ -5,7 +5,6 @@
 #include <string.h>
 
 #define META_SIZE sizeof(struct block_meta)
-#define fbmalloc main
 
 // head of the linked list
 void *global_base = NULL;
@@ -70,12 +69,14 @@ void fbfree(void *ptr) {
     return;
   }
 
+  // Get the block from given pointer
   struct block_meta *block_ptr = get_block_ptr(ptr);
 
   if (!block_ptr) {
     return;
   }
 
+  // Set block to free
   block_ptr->is_free = 1;
   block_ptr->magic = 0x55555555;
 }
@@ -89,7 +90,7 @@ void *fbmalloc(uint16_t bytes)
         return NULL;
     }
 
-    // Check the head of linked list
+    // Check whether linked list is empty or not
     if (!global_base) {
       block = request_space(NULL, bytes);
 
@@ -99,9 +100,13 @@ void *fbmalloc(uint16_t bytes)
 
       global_base = block;
     } else {
+      // Get last value from linked list
       struct block_meta *lastNode = global_base;
+
+      // Check whether there's a free block to be allocated
       block = find_free_block(&lastNode, bytes);
 
+      // If dont, requests some memory
       if (!block) {
         block = request_space(lastNode, bytes);
 
@@ -109,6 +114,7 @@ void *fbmalloc(uint16_t bytes)
             return NULL;
       }
 
+      // If yes, set the block to the "not free" condition
       block->is_free = 0;
       block->magic = 0x77777777;
     }
@@ -119,19 +125,27 @@ void *fbmalloc(uint16_t bytes)
 void *fbrealloc(void *ptr, uint16_t bytes) {
   struct block_meta *block;
 
+  // If ptr is null, just allocate memory and return
   if (!ptr) {
     return fbmalloc(bytes);
   }
 
+  // Get the block pointed by ptr
   struct block_meta *block_ptr = get_block_ptr(ptr);
 
+  // If the amount of bytes that I want to allocate
+  // is less than or equal than the space already allocated
+  // I simply return the ptr
   if (bytes <= block_ptr->size)
     return ptr;
 
+  // If not, I'll allocate the given bytes
   block = fbmalloc(bytes);
 
+  // Copy all the content from the old location to the new one
   memcpy(block, ptr, block_ptr->size);
 
+  // Free the old memory
   fbfree(ptr);
 
   return block;
@@ -144,11 +158,13 @@ void *fbcalloc(uint16_t nelem, uint16_t elsize) {
   struct block_meta *block;
   uint16_t size = nelem * elsize;
 
+  // Allocate some memory
   block = fbmalloc(size);
 
   if (!block)
     return NULL;
 
+  // Initialize all bytes with zero
   memset(block, 0, size);
 
   return block;
