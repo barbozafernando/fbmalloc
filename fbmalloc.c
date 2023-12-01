@@ -64,7 +64,7 @@ struct block_meta *get_block_ptr(void *ptr) {
   return (struct block_meta *) ptr - 1;
 }
 
-void fbfree(void *ptr) {
+void fb_free(void *ptr) {
   if (!ptr) {
     return;
   }
@@ -81,7 +81,7 @@ void fbfree(void *ptr) {
   block_ptr->magic = 0x55555555;
 }
 
-void *fbmalloc(uint16_t bytes)
+void *fb_malloc(uint16_t bytes)
 {
     uint16_t total_size;
     struct block_meta *block;
@@ -122,12 +122,12 @@ void *fbmalloc(uint16_t bytes)
     return (block+1);
 }
 
-void *fbrealloc(void *ptr, uint16_t bytes) {
+void *fb_realloc(void *ptr, uint16_t bytes) {
   struct block_meta *block;
 
   // If ptr is null, just allocate memory and return
   if (!ptr) {
-    return fbmalloc(bytes);
+    return fb_malloc(bytes);
   }
 
   // Get the block pointed by ptr
@@ -140,18 +140,18 @@ void *fbrealloc(void *ptr, uint16_t bytes) {
     return ptr;
 
   // If not, I'll allocate the given bytes
-  block = fbmalloc(bytes);
+  block = fb_malloc(bytes);
 
   // Copy all the content from the old location to the new one
   memcpy(block, ptr, block_ptr->size);
 
   // Free the old memory
-  fbfree(ptr);
+  fb_free(ptr);
 
   return block;
 }
 
-void *fbcalloc(uint16_t nelem, uint16_t elsize) {
+void *fb_calloc(uint16_t nelem, uint16_t elsize) {
   if (!nelem || !elsize)
     return NULL;
 
@@ -159,7 +159,7 @@ void *fbcalloc(uint16_t nelem, uint16_t elsize) {
   uint16_t size = nelem * elsize;
 
   // Allocate some memory
-  block = fbmalloc(size);
+  block = fb_malloc(size);
 
   if (!block)
     return NULL;
