@@ -9,22 +9,17 @@
 // head of the linked list
 void *global_base = NULL;
 
+typedef struct block_meta MemoryBlock;
+
 struct block_meta {
-  // for debbuging only
   int magic;
-
-  // whether current block is free or not
   uint8_t is_free;
-
-  // amount of bytes to be allocated
   uint16_t size;
-
-  // pointer to the next block of memory
-  struct block_meta *next;
+  MemoryBlock *next;
 };
 
-struct block_meta *find_free_block(struct block_meta **last, uint16_t size) {
-  struct block_meta *current = global_base;
+MemoryBlock *find_free_block(struct block_meta **last, uint16_t size) {
+  MemoryBlock *current = global_base;
 
   // checking if there's a free block available
   while (current && !(current->is_free && current->size >= size)) {
@@ -35,8 +30,8 @@ struct block_meta *find_free_block(struct block_meta **last, uint16_t size) {
   return current;
 }
 
-struct block_meta *request_space(struct block_meta *last, uint16_t size) {
-  struct block_meta *block;
+MemoryBlock *request_space(struct block_meta *last, uint16_t size) {
+  MemoryBlock *block;
 
   // returns a pointer to the current top of the heap
   block = sbrk(0);
@@ -60,8 +55,8 @@ struct block_meta *request_space(struct block_meta *last, uint16_t size) {
   return block;
 }
 
-struct block_meta *get_block_ptr(void *ptr) {
-  return (struct block_meta *) ptr - 1;
+MemoryBlock *get_block_ptr(void *ptr) {
+  return (MemoryBlock *) ptr - 1;
 }
 
 void fb_free(void *ptr) {
@@ -70,7 +65,7 @@ void fb_free(void *ptr) {
   }
 
   // Get the block from given pointer
-  struct block_meta *block_ptr = get_block_ptr(ptr);
+  MemoryBlock *block_ptr = get_block_ptr(ptr);
 
   if (!block_ptr) {
     return;
@@ -81,10 +76,10 @@ void fb_free(void *ptr) {
   block_ptr->magic = 0x55555555;
 }
 
-void *fb_malloc(uint16_t bytes)
+void *fb_alloc(uint16_t bytes)
 {
     uint16_t total_size;
-    struct block_meta *block;
+    MemoryBlock *block;
 
     if (!bytes) {
         return NULL;
@@ -101,7 +96,7 @@ void *fb_malloc(uint16_t bytes)
       global_base = block;
     } else {
       // Get last value from linked list
-      struct block_meta *lastNode = global_base;
+      MemoryBlock *lastNode = global_base;
 
       // Check whether there's a free block to be allocated
       block = find_free_block(&lastNode, bytes);
@@ -123,15 +118,15 @@ void *fb_malloc(uint16_t bytes)
 }
 
 void *fb_realloc(void *ptr, uint16_t bytes) {
-  struct block_meta *block;
+  MemoryBlock *block;
 
   // If ptr is null, just allocate memory and return
   if (!ptr) {
-    return fb_malloc(bytes);
+    return fb_alloc(bytes);
   }
 
   // Get the block pointed by ptr
-  struct block_meta *block_ptr = get_block_ptr(ptr);
+  MemoryBlock *block_ptr = get_block_ptr(ptr);
 
   // If the amount of bytes that I want to allocate
   // is less than or equal than the space already allocated
@@ -140,7 +135,7 @@ void *fb_realloc(void *ptr, uint16_t bytes) {
     return ptr;
 
   // If not, I'll allocate the given bytes
-  block = fb_malloc(bytes);
+  block = fb_alloc(bytes);
 
   // Copy all the content from the old location to the new one
   memcpy(block, ptr, block_ptr->size);
@@ -155,11 +150,11 @@ void *fb_calloc(uint16_t nelem, uint16_t elsize) {
   if (!nelem || !elsize)
     return NULL;
 
-  struct block_meta *block;
+  MemoryBlock *block;
   uint16_t size = nelem * elsize;
 
   // Allocate some memory
-  block = fb_malloc(size);
+  block = fb_alloc(size);
 
   if (!block)
     return NULL;
@@ -169,15 +164,4 @@ void *fb_calloc(uint16_t nelem, uint16_t elsize) {
 
   return block;
 }
-
-
-
-
-
-
-
-
-
-
-
 
